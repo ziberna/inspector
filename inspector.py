@@ -57,10 +57,11 @@ import sys
 import contextlib
 import traceback
 # shell history
+import os
 try:
     import readline
 except ImportError:
-    pass
+    readline = None
 # command-line arguments
 import argparse
 
@@ -85,6 +86,8 @@ TIMEOUT_SERVER = 30.0  # in seconds
 TIMEOUT_CLIENT = 0.5  # in seconds
 CHUNK_SIZE = 1024  # in bytes
 PASSPHRASE = 'something dirty'
+
+SHELL_HISTORY_FILE = '~/.inspector_history'
 
 STATUS_WAITING = '# Waiting for inspector'
 STATUS_CONNECTED = '# Inspector has connected'
@@ -284,6 +287,7 @@ def inspector(host, port, timeout, passphrase):
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
+        shell_history()
         while True:
             # get input from user
             code = code_input()
@@ -350,6 +354,16 @@ def code_input():
             code += '\n'
     return code
 
+
+def shell_history():
+    if not readline:
+        return
+    history_file = os.path.expanduser(SHELL_HISTORY_FILE)
+    try:
+        readline.read_history_file(history_file)
+    except IOError:
+        pass
+    atexit.register(readline.write_history_file, history_file)
 
 
 def parse_args():
