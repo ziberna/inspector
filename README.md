@@ -12,8 +12,6 @@ client (inspector shell) are both separate processes, you can even run one side
 in Python 3 and the other in Python 2. Everything you type into the shell will
 be evaluated with server's Python version though.
 
---------------------------------------------------------------------------------
-
 
 Example
 -------
@@ -60,8 +58,6 @@ from anywhere.
     >>> update = lambda n: n * 2
     >>> a = 1
     >>> limit = 4096
-
---------------------------------------------------------------------------------
 
 
 Authors
