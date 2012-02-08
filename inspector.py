@@ -48,7 +48,6 @@ import inspect
 import atexit
 # server and sockets
 import socket
-import json
 import threading
 # compiler
 import codeop
@@ -58,12 +57,19 @@ import sys
 import contextlib
 import traceback
 # shell history
+import os
 try:
     import readline
 except ImportError:
-    pass
+    readline = None
 # command-line arguments
 import argparse
+
+
+__version__ = '0.2.1'
+__copyright__ = """Copyright (C) 2011 by Andrew Moffat
+Copyright (C) 2012  Jure Ziberna"""
+__license__ = 'GNU GPL 3'
 
 
 # Python 2 and 3 support and other hacks
@@ -80,6 +86,8 @@ TIMEOUT_SERVER = 30.0  # in seconds
 TIMEOUT_CLIENT = 0.5  # in seconds
 CHUNK_SIZE = 1024  # in bytes
 PASSPHRASE = 'something dirty'
+
+SHELL_HISTORY_FILE = '~/.inspector_history'
 
 __RED__ = '\033[31m%s\033[0m'
 __YELLOW__ = '\033[33m%s\033[0m'
@@ -244,7 +252,7 @@ class ImporterServer(object):
             try:
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc()
+                return traceback.format_exc(0)  # only first entry in the stack
         return output.getvalue()
     
     @contextlib.contextmanager
@@ -279,13 +287,12 @@ def inspector(host, port, timeout, passphrase):
     sock = Socket(timeout=timeout, passphrase=passphrase)
     try:
         sock.connect((host, port))
-        
         # get the file name that runs the server
         sock.send("globals()['__file__']")
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
-        
+        shell_history()
         while True:
             # get input from user
             code = code_input()
@@ -297,7 +304,6 @@ def inspector(host, port, timeout, passphrase):
             # print if the input has executed
             if output:
                 sys.stdout.write(output)
-    
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
@@ -308,12 +314,7 @@ def inspector(host, port, timeout, passphrase):
 
 def importer_server():
     """
-    Runs a server on the importer's side. The following settings can be
-    set in the importer as global variables:
-     - INSPECTOR_HOST
-     - INSPECTOR_PORT
-     - INSPECTOR_TIMEOUT
-     - INSPECTOR_PASSPHRASE
+    Runs a server on the importer's side.
     """
     # this behaves strangely for me, so I'm checking the whole stack to make it work for everybody
     importer_globals = None
@@ -343,20 +344,31 @@ def code_input():
     This runs on the inspector's (shell) side. The compiler is used to perform
     multiline code input.
     """
-    buffer = ''
+    code = ''
     compiled = None
     while not compiled:
-        prompt = PROMPT_INIT if not buffer else PROMPT_MORE
+        prompt = PROMPT_INIT if not code else PROMPT_MORE
         line = input(prompt)
-        buffer += line
+        code += line
         try:
-            compiled = compile(buffer, '<inspector-shell>', 'single')
+            compiled = compile(code, '<inspector-shell>', 'single')
         except (SyntaxError, OverflowError, ValueError):
-            traceback.print_exc()
-            buffer = ''
+            traceback.print_exc(0)  # only first entry in the stack
+            code = ''
         else:
-            buffer += '\n'
-    return buffer
+            code += '\n'
+    return code
+
+
+def shell_history():
+    if not readline:
+        return
+    history_file = os.path.expanduser(SHELL_HISTORY_FILE)
+    try:
+        readline.read_history_file(history_file)
+    except IOError:
+        pass
+    atexit.register(readline.write_history_file, history_file)
 
 
 def parse_args():
