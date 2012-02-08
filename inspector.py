@@ -48,7 +48,10 @@ import inspect
 import atexit
 # server and sockets
 import socket
+import json
 import threading
+# compiler
+import codeop
 # output
 import io
 import sys
@@ -63,11 +66,12 @@ except ImportError:
 import argparse
 
 
-# Python 2 and 3 support
+# Python 2 and 3 support and other hacks
 PY3 = sys.version_info[0] == 3
 if not PY3:
     input = raw_input
     io.StringIO = io.BytesIO
+compile = codeop.compile_command
 
 
 HOST = 'localhost'
@@ -98,6 +102,9 @@ def status(string, verbose=1):
     """
     if VERBOSE >= verbose:
         print(string)
+
+PROMPT_INIT = '>>> '
+PROMPT_MORE = '... '
 
 
 class Socket(object):
@@ -130,7 +137,6 @@ class Socket(object):
         """
         Combines a header with a message. The header contains message length.
         """
-        message = str(message)
         header = self.header_format % len(message)
         message = header + message
         self.socket.sendall(message.encode())
@@ -199,14 +205,14 @@ class ImporterServer(object):
             if not client_socket:
                 client_socket = self.client_socket()
             try:
-                message = client_socket.receive()
-                if message == None:
+                code = client_socket.receive()
+                if code == None:
                     client_socket = None
                     status(STATUS_DISCONNECTED)
                     continue
                 status(STATUS_RECEIVED, 2)
-                response = self.execute(message)
-                client_socket.send(response)
+                output = self.code_output(code)
+                client_socket.send(output)
             except socket.error as socket_error:
                 print(socket_error)
                 break
@@ -228,13 +234,14 @@ class ImporterServer(object):
                 pass
         return sock
     
-    def execute(self, message):
+    def code_output(self, code):
         """
-        Compiles and executes a given message and returns the output.
+        Compiles and executes the received code and returns the output.
         """
+        compiled = compile(code, '<inspector-server>', 'single')
+        # execute the compiled message and capture the output
         with self.output() as output:
             try:
-                compiled = compile(message, '<inspector-server>', 'single')
                 exec(compiled, self.namespace, self.namespace)
             except:
                 return traceback.format_exc()
@@ -272,20 +279,25 @@ def inspector(host, port, timeout, passphrase):
     sock = Socket(timeout=timeout, passphrase=passphrase)
     try:
         sock.connect((host, port))
+        
         # get the file name that runs the server
         sock.send("globals()['__file__']")
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
-        # loop until interrupted or disconnected/timedout
+        
         while True:
-            code = input('>>> ')
+            # get input from user
+            code = code_input()
             if code == 'exit':
                 break
+            # send the input and receive the output
             sock.send(code)
-            response = sock.receive()
-            if response:
-                sys.stdout.write(response)
+            output = sock.receive()
+            # print if the input has executed
+            if output:
+                sys.stdout.write(output)
+    
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
@@ -326,6 +338,27 @@ def importer_server():
     atexit.register(server.shutdown)
 
 
+def code_input():
+    """
+    This runs on the inspector's (shell) side. The compiler is used to perform
+    multiline code input.
+    """
+    buffer = ''
+    compiled = None
+    while not compiled:
+        prompt = PROMPT_INIT if not buffer else PROMPT_MORE
+        line = input(prompt)
+        buffer += line
+        try:
+            compiled = compile(buffer, '<inspector-shell>', 'single')
+        except (SyntaxError, OverflowError, ValueError):
+            traceback.print_exc()
+            buffer = ''
+        else:
+            buffer += '\n'
+    return buffer
+
+
 def parse_args():
     """
     Parses command-line arguments. Displays usage when -h option is given.
@@ -345,3 +378,4 @@ if __name__ == '__main__':
 else:
     # from the importer's side (server)
     importer_server()
+
