@@ -48,7 +48,6 @@ import inspect
 import atexit
 # server and sockets
 import socket
-import json
 import threading
 # compiler
 import codeop
@@ -239,7 +238,7 @@ class ImporterServer(object):
             try:
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc()
+                return traceback.format_exc(0)  # only first entry in the stack
         return output.getvalue()
     
     @contextlib.contextmanager
@@ -347,7 +346,7 @@ def code_input():
         try:
             compiled = compile(buffer, '<inspector-shell>', 'single')
         except (SyntaxError, OverflowError, ValueError):
-            traceback.print_exc()
+            traceback.print_exc(0)  # only first entry in the stack
             buffer = ''
         else:
             buffer += '\n'
