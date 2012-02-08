@@ -13,12 +13,11 @@ Example
 
 ### Importer's side
 
-The file that imports inspector will run a server. Importing the inspector
-is enough.
-
 ```python
-import time
+# All you need to do is to import inspector
 import inspector
+
+import time
 
 a = 1
 b = 10
@@ -32,26 +31,32 @@ while a <= limit:
     time.sleep(1)
 ```
 
-You can also import the inspector from a Python shell if you want to just test
+You can also import the inspector from a Python shell if you just want to see
 how it works.
 
 
 ### Inspector's side
 
-Run the inspector shell with `python inspector.py`. I advise  you to create a
-symlink to the inspector.py somewhere on your `$PATH`, so that you can run it
-from anywhere.
+Run the inspector shell with `python inspector.py`. 
 
+    [jure@Kant inspector]$ python inspector.py
     <Inspector @ localhost:2971 (importer_file_name.py)>
     >>> a
     9
     >>> a = 100
     >>> a
     102
-    >>> b = 2
-    >>> update = lambda n: n * 2
-    >>> a = 1
-    >>> limit = 4096
+    >>> b = 1
+    >>> def update(n):
+    ...     if n % 2:
+    ...         n = n // 2
+    ...     else:
+    ...         n = n * 3 + 1
+    ...     return n
+    >>> a = 1000
+
+Create a symlink to the inspector.py somewhere on your `$PATH`, so that you can
+run it from anywhere.
 
 
 Options
