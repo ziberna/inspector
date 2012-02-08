@@ -48,6 +48,7 @@ import inspect
 import atexit
 # server and sockets
 import socket
+import json
 import threading
 # output
 import io
@@ -121,11 +122,12 @@ class Socket(object):
         self.socket.settimeout(self.timeout)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
-    def send(self, message):
+    def send(self, message, code=0):
         """
         Combines a header with a message. The header contains message length.
         """
-        message = str(message)
+        message = {'message': str(message), 'code': code}
+        message = json.dumps(message)
         header = self.header_format % len(message)
         message = header + message
         self.socket.sendall(message.encode())
@@ -142,7 +144,8 @@ class Socket(object):
         message = message_chunk
         while len(message) < length:
             message += self.socket.recv(self.chunk_size)
-        return message.decode()
+        message = message.decode()
+        return json.loads(message)
     
     def parse_header(self, header):
         """
@@ -159,6 +162,8 @@ class ImporterServer(object):
     A simple socket server which executes any message it receives in given
     namespace.
     """
+    buffer = ''  # code buffer for unexpected EOFs (uncompleted code)
+    
     def __init__(self, address, namespace):
         self.address = address
         self.namespace = namespace
@@ -200,8 +205,8 @@ class ImporterServer(object):
                     status(STATUS_DISCONNECTED)
                     continue
                 status(STATUS_RECEIVED, 2)
-                response = self.execute(message)
-                client_socket.send(response)
+                output, code = self.execute(message)
+                client_socket.send(output, code)
             except socket.error as socket_error:
                 print(socket_error)
                 break
@@ -227,13 +232,29 @@ class ImporterServer(object):
         """
         Compiles and executes a given message and returns the output.
         """
+        # apply previous buffer
+        message = self.buffer + message['message']
+        # compile the message, add to buffer if incomplete
+        try:
+            compiled = compile(message, '<inspector-server>', 'single')
+        except SyntaxError as error:
+            if 'unexpected EOF' in error.msg:
+                self.buffer += message + '\n'
+                return None, 1
+            else:
+                self.buffer = ''
+                return traceback.format_exc(), 0
+        except:
+            self.buffer = ''
+            return traceback.format_exc(), 0
+        self.buffer = ''
+        # execute the compiled message
         with self.output() as output:
             try:
-                compiled = compile(message, '<inspector-server>', 'single')
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc()
-        return output.getvalue()
+                return traceback.format_exc(), 0
+        return output.getvalue(), 0
     
     @contextlib.contextmanager
     def output(self, output=None):
@@ -259,6 +280,8 @@ class ImporterServer(object):
             status(STATUS_SHUTDOWN)
 
 
+PROMPT = {0: '>>>', 1: '...'}
+
 def inspector(host, port, timeout, passphrase):
     """
     Opens a socket for communicating with the importer from the
@@ -269,18 +292,20 @@ def inspector(host, port, timeout, passphrase):
         sock.connect((host, port))
         # get the file name that runs the server
         sock.send("globals()['__file__']")
-        importer_file = sock.receive().strip().strip("'")
+        importer_file = sock.receive()['message'].strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
         # loop until interrupted or disconnected/timedout
+        response = {'code': 0}  # dummy variable for first iteration
         while True:
-            code = input('>>> ')
+            prompt = PROMPT[response['code']] + ' '
+            code = input(prompt)
             if code == 'exit':
                 break
             sock.send(code)
             response = sock.receive()
-            if response:
-                sys.stdout.write(response)
+            if response and response['code'] == 0:
+                sys.stdout.write(response['message'])
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
