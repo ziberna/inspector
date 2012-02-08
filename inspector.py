@@ -65,6 +65,12 @@ except ImportError:
 import argparse
 
 
+__version__ = '0.2.1'
+__copyright__ = """Copyright (C) 2011 by Andrew Moffat
+Copyright (C) 2012  Jure Ziberna"""
+__license__ = 'GNU GPL 3'
+
+
 # Python 2 and 3 support and other hacks
 PY3 = sys.version_info[0] == 3
 if not PY3:
