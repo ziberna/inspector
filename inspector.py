@@ -84,7 +84,7 @@ STATUS_RECEIVED = '# Inspector\'s message received'
 STATUS_STOPPED = '# Inspector stopped running'
 STATUS_SHUTDOWN = '# Inspector server has shutdown'
 
-VERBOSE = 1
+VERBOSE = 0
 
 def status(string, verbose=1):
     """

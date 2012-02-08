@@ -1,21 +1,15 @@
 _Inspector_ is a re-implementation of Andrew Moffat's
 [Inspect-Shell](https://github.com/amoffat/Inspect-Shell). At the moment it
-doesn't support saving shell history to a file or auto-completion. The
-additional features are:
+doesn't support saving shell history to a file or auto-completion
 
- - setting host, timeout and message passphrase. Port can also be set, but this
-   can already be done in the official implementation.
- - server side notifications about client connections
-
-It runs in both Python 2 and 3. Since the server (inspector importer) and the
-client (inspector shell) are both separate processes, you can even run one side
+It runs with both Python 2 and 3. Since the server (inspector importer) and the
+client (inspector shell) are separate processes, you can even run one side
 in Python 3 and the other in Python 2. Everything you type into the shell will
 be evaluated with server's Python version though.
 
 
 Example
 -------
-
 
 ### Importer's side
 
@@ -58,6 +52,33 @@ from anywhere.
     >>> update = lambda n: n * 2
     >>> a = 1
     >>> limit = 4096
+
+
+Options
+-------
+
+ - `inspector.VERBOSE` level of status updates
+ - `inspector.HOST`
+ - `inspector.PORT`
+ - `inspector.TIMEOUT_SERVER`
+ - `inspector.TIMEOUT_CLIENT`
+ - `inspector.PASSPHRASE` to ensure nobody is messing with your variables' values
+ - `inspector.CHUNK_SIZE` of each message chunk that is recieved
+
+
+Command-line arguments
+----------------------
+
+    usage: inspector.py [-h] [-l host] [-p port] [-t timeout] [-s passphrase]
+    
+    Inspector
+    
+    optional arguments:
+      -h, --help     show this help message and exit
+      -l host
+      -p port
+      -t timeout
+      -s passphrase
 
 
 Authors
