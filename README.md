@@ -53,6 +53,7 @@ Run the inspector shell with `python inspector.py`.
     ...     else:
     ...         n = n * 3 + 1
     ...     return n
+    ...
     >>> a = 1000
 
 Create a symlink to the inspector.py somewhere on your `$PATH`, so that you can
