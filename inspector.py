@@ -96,6 +96,15 @@ def status(string, verbose=1):
         print(string)
 
 
+CODE_OK = 0
+CODE_WAIT = 1
+
+PROMPT = {
+    CODE_OK: '>>>',
+    CODE_WAIT: '...',
+}
+
+
 class Socket(object):
     """
     Socket wrapper.
@@ -122,7 +131,7 @@ class Socket(object):
         self.socket.settimeout(self.timeout)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
-    def send(self, message, code=0):
+    def send(self, message, code=CODE_OK):
         """
         Combines a header with a message. The header contains message length.
         """
@@ -240,21 +249,21 @@ class ImporterServer(object):
         except SyntaxError as error:
             if 'unexpected EOF' in error.msg:
                 self.buffer += message + '\n'
-                return None, 1
+                return None, CODE_WAIT
             else:
                 self.buffer = ''
-                return traceback.format_exc(), 0
+                return traceback.format_exc(), CODE_OK
         except:
             self.buffer = ''
-            return traceback.format_exc(), 0
+            return traceback.format_exc(), CODE_OK
         self.buffer = ''
         # execute the compiled message
         with self.output() as output:
             try:
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc(), 0
-        return output.getvalue(), 0
+                return traceback.format_exc(), CODE_OK
+        return output.getvalue(), CODE_OK
     
     @contextlib.contextmanager
     def output(self, output=None):
@@ -280,8 +289,6 @@ class ImporterServer(object):
             status(STATUS_SHUTDOWN)
 
 
-PROMPT = {0: '>>>', 1: '...'}
-
 def inspector(host, port, timeout, passphrase):
     """
     Opens a socket for communicating with the importer from the
@@ -290,22 +297,27 @@ def inspector(host, port, timeout, passphrase):
     sock = Socket(timeout=timeout, passphrase=passphrase)
     try:
         sock.connect((host, port))
+        
         # get the file name that runs the server
         sock.send("globals()['__file__']")
         importer_file = sock.receive()['message'].strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
-        # loop until interrupted or disconnected/timedout
-        response = {'code': 0}  # dummy variable for first iteration
+        
+        response = {'code': CODE_OK}  # dummy variable for first iteration
         while True:
+            # get input from user
             prompt = PROMPT[response['code']] + ' '
             code = input(prompt)
             if code == 'exit':
                 break
+            # send the input and receive the output
             sock.send(code)
             response = sock.receive()
-            if response and response['code'] == 0:
+            # print if the input has executed
+            if response and response['code'] == CODE_OK:
                 sys.stdout.write(response['message'])
+    
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
@@ -365,3 +377,4 @@ if __name__ == '__main__':
 else:
     # from the importer's side (server)
     importer_server()
+
