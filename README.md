@@ -1,11 +1,11 @@
 _Inspector_ is a re-implementation of Andrew Moffat's
-[Inspect-Shell](https://github.com/amoffat/Inspect-Shell). At the moment it
-doesn't support saving shell history to a file or auto-completion
+[Inspect-Shell](https://github.com/amoffat/Inspect-Shell). It doesn't support
+autocompletion yet.
 
 It runs with both Python 2 and 3. Since the server (inspector importer) and the
 client (inspector shell) are separate processes, you can even run one side
 in Python 3 and the other in Python 2. Everything you type into the shell will
-be evaluated with server's Python version though.
+be evaluated from both sides though.
 
 
 Example
