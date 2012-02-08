@@ -77,12 +77,17 @@ TIMEOUT_CLIENT = 0.5  # in seconds
 CHUNK_SIZE = 1024  # in bytes
 PASSPHRASE = 'something dirty'
 
-STATUS_WAITING = '# Waiting for inspector'
-STATUS_CONNECTED = '# Inspector has connected'
-STATUS_DISCONNECTED = '# Inspector has disconnected'
-STATUS_RECEIVED = '# Inspector\'s message received'
-STATUS_STOPPED = '# Inspector stopped running'
-STATUS_SHUTDOWN = '# Inspector server has shutdown'
+__RED__ = '\033[31m%s\033[0m'
+__YELLOW__ = '\033[33m%s\033[0m'
+__GREEN__ = '\033[32m%s\033[0m'
+__SYMBOL__ = '#'
+
+STATUS_WAITING = '%s Waiting for inspector' % (__YELLOW__ % __SYMBOL__)
+STATUS_CONNECTED = '%s Inspector has connected' % (__GREEN__ % __SYMBOL__)
+STATUS_DISCONNECTED = '%s Inspector has disconnected' % (__YELLOW__ % __SYMBOL__)
+STATUS_RECEIVED = '%s Inspector\'s message received' % (__GREEN__ % __SYMBOL__)
+STATUS_STOPPED = '%s Inspector stopped running' % (__YELLOW__ % __SYMBOL__)
+STATUS_SHUTDOWN = '%s Inspector server has shutdown' % (__RED__ % __SYMBOL__)
 
 VERBOSE = 0
 
