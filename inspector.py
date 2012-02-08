@@ -279,13 +279,11 @@ def inspector(host, port, timeout, passphrase):
     sock = Socket(timeout=timeout, passphrase=passphrase)
     try:
         sock.connect((host, port))
-        
         # get the file name that runs the server
         sock.send("globals()['__file__']")
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
-        
         while True:
             # get input from user
             code = code_input()
@@ -297,7 +295,6 @@ def inspector(host, port, timeout, passphrase):
             # print if the input has executed
             if output:
                 sys.stdout.write(output)
-    
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
@@ -308,12 +305,7 @@ def inspector(host, port, timeout, passphrase):
 
 def importer_server():
     """
-    Runs a server on the importer's side. The following settings can be
-    set in the importer as global variables:
-     - INSPECTOR_HOST
-     - INSPECTOR_PORT
-     - INSPECTOR_TIMEOUT
-     - INSPECTOR_PASSPHRASE
+    Runs a server on the importer's side.
     """
     # this behaves strangely for me, so I'm checking the whole stack to make it work for everybody
     importer_globals = None
@@ -343,20 +335,21 @@ def code_input():
     This runs on the inspector's (shell) side. The compiler is used to perform
     multiline code input.
     """
-    buffer = ''
+    code = ''
     compiled = None
     while not compiled:
-        prompt = PROMPT_INIT if not buffer else PROMPT_MORE
+        prompt = PROMPT_INIT if not code else PROMPT_MORE
         line = input(prompt)
-        buffer += line
+        code += line
         try:
-            compiled = compile(buffer, '<inspector-shell>', 'single')
+            compiled = compile(code, '<inspector-shell>', 'single')
         except (SyntaxError, OverflowError, ValueError):
             traceback.print_exc(0)  # only first entry in the stack
-            buffer = ''
+            code = ''
         else:
-            buffer += '\n'
-    return buffer
+            code += '\n'
+    return code
+
 
 
 def parse_args():
