@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #===============================================================================
 # Inspector is a re-implementation Inspect-Shell. The author of the original
 # project and the idea is Andrew Moffat.
