@@ -50,6 +50,8 @@ import atexit
 import socket
 import json
 import threading
+# compiler
+import codeop
 # output
 import io
 import sys
@@ -64,11 +66,12 @@ except ImportError:
 import argparse
 
 
-# Python 2 and 3 support
+# Python 2 and 3 support and other hacks
 PY3 = sys.version_info[0] == 3
 if not PY3:
     input = raw_input
     io.StringIO = io.BytesIO
+compile = codeop.compile_command
 
 
 HOST = 'localhost'
@@ -95,14 +98,8 @@ def status(string, verbose=1):
     if VERBOSE >= verbose:
         print(string)
 
-
-CODE_OK = 0
-CODE_WAIT = 1
-
-PROMPT = {
-    CODE_OK: '>>>',
-    CODE_WAIT: '...',
-}
+PROMPT_INIT = '>>> '
+PROMPT_MORE = '... '
 
 
 class Socket(object):
@@ -131,12 +128,10 @@ class Socket(object):
         self.socket.settimeout(self.timeout)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
-    def send(self, message, code=CODE_OK):
+    def send(self, message):
         """
         Combines a header with a message. The header contains message length.
         """
-        message = {'message': str(message), 'code': code}
-        message = json.dumps(message)
         header = self.header_format % len(message)
         message = header + message
         self.socket.sendall(message.encode())
@@ -153,8 +148,7 @@ class Socket(object):
         message = message_chunk
         while len(message) < length:
             message += self.socket.recv(self.chunk_size)
-        message = message.decode()
-        return json.loads(message)
+        return message.decode()
     
     def parse_header(self, header):
         """
@@ -171,8 +165,6 @@ class ImporterServer(object):
     A simple socket server which executes any message it receives in given
     namespace.
     """
-    buffer = ''  # code buffer for unexpected EOFs (uncompleted code)
-    
     def __init__(self, address, namespace):
         self.address = address
         self.namespace = namespace
@@ -208,14 +200,14 @@ class ImporterServer(object):
             if not client_socket:
                 client_socket = self.client_socket()
             try:
-                message = client_socket.receive()
-                if message == None:
+                code = client_socket.receive()
+                if code == None:
                     client_socket = None
                     status(STATUS_DISCONNECTED)
                     continue
                 status(STATUS_RECEIVED, 2)
-                output, code = self.execute(message)
-                client_socket.send(output, code)
+                output = self.code_output(code)
+                client_socket.send(output)
             except socket.error as socket_error:
                 print(socket_error)
                 break
@@ -237,33 +229,18 @@ class ImporterServer(object):
                 pass
         return sock
     
-    def execute(self, message):
+    def code_output(self, code):
         """
-        Compiles and executes a given message and returns the output.
+        Compiles and executes the received code and returns the output.
         """
-        # apply previous buffer
-        message = self.buffer + message['message']
-        # compile the message, add to buffer if incomplete
-        try:
-            compiled = compile(message, '<inspector-server>', 'single')
-        except SyntaxError as error:
-            if 'unexpected EOF' in error.msg:
-                self.buffer += message + '\n'
-                return None, CODE_WAIT
-            else:
-                self.buffer = ''
-                return traceback.format_exc(), CODE_OK
-        except:
-            self.buffer = ''
-            return traceback.format_exc(), CODE_OK
-        self.buffer = ''
-        # execute the compiled message
+        compiled = compile(code, '<inspector-server>', 'single')
+        # execute the compiled message and capture the output
         with self.output() as output:
             try:
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc(), CODE_OK
-        return output.getvalue(), CODE_OK
+                return traceback.format_exc()
+        return output.getvalue()
     
     @contextlib.contextmanager
     def output(self, output=None):
@@ -300,23 +277,21 @@ def inspector(host, port, timeout, passphrase):
         
         # get the file name that runs the server
         sock.send("globals()['__file__']")
-        importer_file = sock.receive()['message'].strip().strip("'")
+        importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
         
-        response = {'code': CODE_OK}  # dummy variable for first iteration
         while True:
             # get input from user
-            prompt = PROMPT[response['code']] + ' '
-            code = input(prompt)
+            code = code_input()
             if code == 'exit':
                 break
             # send the input and receive the output
             sock.send(code)
-            response = sock.receive()
+            output = sock.receive()
             # print if the input has executed
-            if response and response['code'] == CODE_OK:
-                sys.stdout.write(response['message'])
+            if output:
+                sys.stdout.write(output)
     
     except (EOFError, KeyboardInterrupt):
         print('')
@@ -356,6 +331,27 @@ def importer_server():
     server.run()
     # reassure server shutdown at exit
     atexit.register(server.shutdown)
+
+
+def code_input():
+    """
+    This runs on the inspector's (shell) side. The compiler is used to perform
+    multiline code input.
+    """
+    buffer = ''
+    compiled = None
+    while not compiled:
+        prompt = PROMPT_INIT if not buffer else PROMPT_MORE
+        line = input(prompt)
+        buffer += line
+        try:
+            compiled = compile(buffer, '<inspector-shell>', 'single')
+        except (SyntaxError, OverflowError, ValueError):
+            traceback.print_exc()
+            buffer = ''
+        else:
+            buffer += '\n'
+    return buffer
 
 
 def parse_args():
