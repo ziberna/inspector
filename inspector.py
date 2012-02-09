@@ -66,7 +66,7 @@ except ImportError:
 import argparse
 
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -114,7 +114,8 @@ class Socket(object):
     """
     Socket wrapper.
     """
-    def __init__(self, timeout=0.5, chunk_size=1024, socket=None, passphrase=PASSPHRASE):
+    def __init__(self, timeout=TIMEOUT_CLIENT, chunk_size=CHUNK_SIZE,
+                 passphrase=PASSPHRASE, socket=None):
         self.timeout = timeout
         self.chunk_size = chunk_size
         if socket:
@@ -243,13 +244,16 @@ class ImporterServer(object):
         """
         Compiles and executes the received code and returns the output.
         """
-        compiled = compile(code, '<inspector-server>', 'single')
+        try:
+            compiled = compile(code, '<inspector-server>', 'single')
+        except (SyntaxError, OverflowError, ValueError):
+            return traceback.format_exc(0)  # only first entry in the stack
         # execute the compiled message and capture the output
         with self.output() as output:
             try:
                 exec(compiled, self.namespace, self.namespace)
             except:
-                return traceback.format_exc(0)  # only first entry in the stack
+                return traceback.format_exc()
         return output.getvalue()
     
     @contextlib.contextmanager
@@ -285,7 +289,7 @@ def inspector_shell(host, port, timeout, passphrase):
     try:
         sock.connect((host, port))
         # get the file name that runs the server
-        sock.send("globals()['__file__']")
+        sock.send("__file__")
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
@@ -386,7 +390,7 @@ def parse_args():
 
 if __name__ == '__main__':
     # from the inspector's side (client)
-    inspector(*parse_args())
+    inspector_shell(*parse_args())
 else:
     # from the importer's side (server)
     importer_server()
