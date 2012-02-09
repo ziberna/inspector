@@ -8,15 +8,46 @@ in Python 3 and the other in Python 2. Everything you type into the shell will
 be evaluated from both sides though.
 
 
+What it does
+------------
+
+Inspector allows you to read, change or add global variables of your Python
+program from another process (a shell) while your program is running.
+
+You could, for example, add a whole class to your program from the shell and
+rewrite some function so that it starts using your newly-created class. All that
+while your program continues to run! Yes, that's pretty cool.
+
+
+How it works
+------------
+
+Inspector has 2 modes; server mode and shell mode. Server mode is run by your
+Python program (in a separate thread), while the shell mode is run by the
+inspector itself.
+
+Steps:
+
+ 1. add `import inspector` to your program
+ 2. run your program
+ 3. run the inspector with `python inspector.py`
+ 4. type code into the shell
+
+After you're done, exit the shell by pressing Ctrl-D or Ctrl-C, or typing
+`exit`. You program will continue to run with all the changes made. You can run
+the inspector again anytime you want.
+
+You can also import the inspector from a Python shell if you just want to see
+how it works.
+
+
 Example
 -------
 
-### Importer's side
+### Importer's side (your program)
 
 ```python
-# All you need to do is to import inspector
-import inspector
-
+import inspector  # add this line to your program
 import time
 
 a = 1
@@ -31,15 +62,10 @@ while a <= limit:
     time.sleep(1)
 ```
 
-You can also import the inspector from a Python shell if you just want to see
-how it works.
 
+### Inspector's side (the shell) 
 
-### Inspector's side
-
-Run the inspector shell with `python inspector.py`. 
-
-    [jure@Kant inspector]$ python inspector.py
+    [user@host dir]$ python inspector.py
     <Inspector @ localhost:2971 (importer_file_name.py)>
     >>> a
     9
@@ -48,43 +74,52 @@ Run the inspector shell with `python inspector.py`.
     102
     >>> b = 1
     >>> def update(n):
-    ...     if n % 2:
+    ...     if n % 2 == 0:
     ...         n = n // 2
     ...     else:
     ...         n = n * 3 + 1
     ...     return n
     ...
-    >>> a = 1000
-
-Create a symlink to the inspector.py somewhere on your `$PATH`, so that you can
-run it from anywhere.
+    >>> a = 1000 
 
 
-Options
--------
+Advanced options
+----------------
 
- - `inspector.VERBOSE` level of status updates
- - `inspector.HOST`
- - `inspector.PORT`
- - `inspector.TIMEOUT_SERVER`
- - `inspector.TIMEOUT_CLIENT`
- - `inspector.PASSPHRASE` to ensure nobody is messing with your variables' values
- - `inspector.CHUNK_SIZE` of each message chunk that is recieved
+Inspector allows you to change various settings by adding a variable to your
+program before importing the inspector:
+
+```python
+INSPECTOR_VARIABLE_NAME = 'some value'
+import inspector
+
+# and your program here
+```
+
+Possible settings are:
+
+ - INSPECTOR\_HOST = _your-host-name_
+ - INSPECTOR\_PORT = _port-number_
+ - INSPECTOR\_TIMEOUT = _seconds_
+ - INSPECTOR\_PASSPHRASE = 'anything you want'
+
+If you set these, you'll have to tell the inspector's shell about them, so
+it can connect properly to your program. You do this by adding command-line
+arguments, like so:
+
+    [user@host dir]$ python inspector.py -l <host> -p <port> -t <timeout> -s <passphrase>
+
+Run `python inspector.py --help` to get a help message about command-line arguments.
 
 
-Command-line arguments
-----------------------
+There are two other options that I haven't mentioned yet. These are:
 
-    usage: inspector.py [-h] [-l host] [-p port] [-t timeout] [-s passphrase]
-    
-    Inspector
-    
-    optional arguments:
-      -h, --help     show this help message and exit
-      -l host
-      -p port
-      -t timeout
-      -s passphrase
+ - INSPECTOR\_SHELL = True
+ - INSPECTOR\_DISABLE = True
+
+The first one enables shell mode instead of server mode. The second one turns
+inspector into a normal module, so that you can use parts of it without running
+the server in the background.
 
 
 Authors
