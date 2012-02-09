@@ -37,6 +37,9 @@ After you're done, exit the shell by pressing Ctrl-D or Ctrl-C, or typing
 `exit`. You program will continue to run with all the changes made. You can run
 the inspector again anytime you want.
 
+You can also import the inspector from a Python shell if you just want to see
+how it works.
+
 
 Example
 -------
@@ -58,9 +61,6 @@ while a <= limit:
     a = update(a)
     time.sleep(1)
 ```
-
-You can also import the inspector from a Python shell if you just want to see
-how it works.
 
 
 ### Inspector's side (the shell) 
