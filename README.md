@@ -63,11 +63,9 @@ You can also import the inspector from a Python shell if you just want to see
 how it works.
 
 
-### Inspector's side (the shell)
+### Inspector's side (the shell) 
 
-Run the inspector shell with `python inspector.py`. 
-
-    [jure@Kant inspector]$ python inspector.py
+    [user@host dir]$ python inspector.py
     <Inspector @ localhost:2971 (importer_file_name.py)>
     >>> a
     9
@@ -82,37 +80,46 @@ Run the inspector shell with `python inspector.py`.
     ...         n = n * 3 + 1
     ...     return n
     ...
-    >>> a = 1000
-
-Create a symlink to the inspector.py somewhere on your `$PATH`, so that you can
-run it from anywhere.
+    >>> a = 1000 
 
 
-Options
--------
+Advanced options
+----------------
 
- - `inspector.VERBOSE` level of status updates
- - `inspector.HOST`
- - `inspector.PORT`
- - `inspector.TIMEOUT_SERVER`
- - `inspector.TIMEOUT_CLIENT`
- - `inspector.PASSPHRASE` to ensure nobody is messing with your variables' values
- - `inspector.CHUNK_SIZE` of each message chunk that is recieved
+Inspector allows you to change various settings by adding a variable to your
+program before importing the inspector:
+
+```python
+INSPECTOR_VARIABLE_NAME = 'some value'
+import inspector
+
+# and your program here
+```
+
+Possible settings are:
+
+ - INSPECTOR\_HOST =_your-host-name_
+ - INSPECTOR\_PORT = _port-number_
+ - INSPECTOR\_TIMEOUT = _seconds_
+ - INSPECTOR\_PASSPHRASE = 'anything you want'
+
+If you set these, you'll have to tell the inspector's shell about them, so
+it can connect properly to your program. You do this by adding command-line
+arguments, like so:
+
+    [user@host dir]$ python inspector.py -l <host> -p <port> -t <timeout> -s <passphrase>
+
+Run `python inspector.py --help` to get a help message about command-line arguments.
 
 
-Command-line arguments
-----------------------
+There are two other options that I haven't mentioned yet. These are:
 
-    usage: inspector.py [-h] [-l host] [-p port] [-t timeout] [-s passphrase]
-    
-    Inspector
-    
-    optional arguments:
-      -h, --help     show this help message and exit
-      -l host
-      -p port
-      -t timeout
-      -s passphrase
+ - INSPECTOR\_SHELL = True
+ - INSPECTOR\_DISABLE = True
+
+The first one enables shell mode instead of server mode. The second one turns
+inspector into a normal module, so that you can use parts of it without running
+the server in the background.
 
 
 Authors
