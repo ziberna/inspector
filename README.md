@@ -98,7 +98,7 @@ import inspector
 
 Possible settings are:
 
- - INSPECTOR\_HOST =_your-host-name_
+ - INSPECTOR\_HOST = _your-host-name_
  - INSPECTOR\_PORT = _port-number_
  - INSPECTOR\_TIMEOUT = _seconds_
  - INSPECTOR\_PASSPHRASE = 'anything you want'
