@@ -8,15 +8,43 @@ in Python 3 and the other in Python 2. Everything you type into the shell will
 be evaluated from both sides though.
 
 
+What it does
+------------
+
+Inspector allows you to read, change or add global variables of your Python
+program from another process (a shell) while your program is running.
+
+You can even add huge pieces of code to your program! While your program is
+running! Yes, that's pretty cool.
+
+
+How it works
+------------
+
+Inspector has 2 modes; server mode and shell mode. Server mode is run by your
+Python program (in a separate thread), while the shell mode is run by the
+inspector itself.
+
+Steps:
+
+ 1. import the inspector from your program (add `import inspector` at the top)
+ 2. run your program
+ 3. run the inspector (`python inspector.py`), an interactive shell will appear
+ 4. type code into the shell to change, read or add variables of your program
+    while your program is running
+ 5. to exit the shell (not your program) press Ctrl-D or Ctrl-C, or type `exit`
+
+You could, for example, add whole class from the shell and rewrite some
+function so that it starts using your newly-created class.
+
+
 Example
 -------
 
-### Importer's side
+### Importer's side (your program)
 
 ```python
-# All you need to do is to import inspector
-import inspector
-
+import inspector  # add this line to your program
 import time
 
 a = 1
@@ -35,7 +63,7 @@ You can also import the inspector from a Python shell if you just want to see
 how it works.
 
 
-### Inspector's side
+### Inspector's side (the shell)
 
 Run the inspector shell with `python inspector.py`. 
 
@@ -48,7 +76,7 @@ Run the inspector shell with `python inspector.py`.
     102
     >>> b = 1
     >>> def update(n):
-    ...     if n % 2:
+    ...     if n % 2 == 0:
     ...         n = n // 2
     ...     else:
     ...         n = n * 3 + 1
