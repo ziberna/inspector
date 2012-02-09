@@ -366,6 +366,13 @@ def importer_server():
     port = importer_globals.get('INSPECTOR_PORT', PORT)
     timeout = importer_globals.get('INSPECTOR_TIMEOUT', TIMEOUT_SERVER)
     passphrase = importer_globals.get('INSPECTOR_PASSPHRASE', PASSPHRASE)
+    # does it want to be a shell instead?
+    if importer_globals.get('INSPECTOR_SHELL'):
+        timeout = importer_globals.get('INSPECTOR_TIMEOUT', TIMEOUT_CLIENT)
+        inspector_shell(host, port, timeout, passphrase)
+        return
+    elif importer_globals.get('INSPECTOR_DISABLE'):
+        return
     # server initialization
     server = ImporterServer((host, port), importer_globals)
     # server start-up
