@@ -208,12 +208,14 @@ class ImporterServer(object):
             if not client_socket:
                 client_socket = self.client_socket()
             try:
+                # receiving part
                 code = client_socket.receive()
                 if code == None:
                     client_socket = None
                     status(STATUS_DISCONNECTED)
                     continue
                 status(STATUS_RECEIVED, 2)
+                # sending part
                 output = self.code_output(code)
                 client_socket.send(output)
             except socket.error as socket_error:
@@ -274,7 +276,7 @@ class ImporterServer(object):
             status(STATUS_SHUTDOWN)
 
 
-def inspector(host, port, timeout, passphrase):
+def inspector_shell(host, port, timeout, passphrase):
     """
     Opens a socket for communicating with the importer from the
     shell side. Runs a shell after connection is established.
@@ -289,9 +291,9 @@ def inspector(host, port, timeout, passphrase):
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
         shell_history()
         while True:
-            # get input from user
+            # get input from the user
             code = code_input()
-            if code == 'exit':
+            if code.strip() == 'exit':
                 break
             # send the input and receive the output
             sock.send(code)
@@ -305,6 +307,41 @@ def inspector(host, port, timeout, passphrase):
         print(error)
     finally:
         sock.close()
+
+
+def code_input():
+    """
+    This runs on the inspector's (shell) side. The compiler is used to perform
+    multi-line code input.
+    """
+    code = ''
+    compiled = None
+    while not compiled:
+        prompt = PROMPT_INIT if not code else PROMPT_MORE
+        code += input(prompt)  # add a line to the code string
+        try:
+            # returns None if the code is valid but not finished
+            compiled = compile(code, '<inspector-shell>', 'single')
+        except (SyntaxError, OverflowError, ValueError):
+            traceback.print_exc(0)  # only first entry in the stack
+            code = ''
+        else:
+            code += '\n'
+    return code
+
+
+def shell_history():
+    """
+    Reads shell history from a file, registers writing at exit
+    """
+    if not readline:
+        return
+    history_file = os.path.expanduser(SHELL_HISTORY_FILE)
+    try:
+        readline.read_history_file(history_file)
+    except IOError:
+        pass
+    atexit.register(readline.write_history_file, history_file)
 
 
 def importer_server():
@@ -330,40 +367,8 @@ def importer_server():
     # server start-up
     server.start(timeout=timeout, passphrase=passphrase)
     server.run()
-    # reassure server shutdown at exit
+    # assure server shutdown at exit
     atexit.register(server.shutdown)
-
-
-def code_input():
-    """
-    This runs on the inspector's (shell) side. The compiler is used to perform
-    multiline code input.
-    """
-    code = ''
-    compiled = None
-    while not compiled:
-        prompt = PROMPT_INIT if not code else PROMPT_MORE
-        line = input(prompt)
-        code += line
-        try:
-            compiled = compile(code, '<inspector-shell>', 'single')
-        except (SyntaxError, OverflowError, ValueError):
-            traceback.print_exc(0)  # only first entry in the stack
-            code = ''
-        else:
-            code += '\n'
-    return code
-
-
-def shell_history():
-    if not readline:
-        return
-    history_file = os.path.expanduser(SHELL_HISTORY_FILE)
-    try:
-        readline.read_history_file(history_file)
-    except IOError:
-        pass
-    atexit.register(readline.write_history_file, history_file)
 
 
 def parse_args():
