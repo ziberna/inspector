@@ -14,8 +14,9 @@ What it does
 Inspector allows you to read, change or add global variables of your Python
 program from another process (a shell) while your program is running.
 
-You can even add huge pieces of code to your program! While your program is
-running! Yes, that's pretty cool.
+You could, for example, add a whole class to your program from the shell and
+rewrite some function so that it starts using your newly-created class. All that
+while your program continues to run! Yes, that's pretty cool.
 
 
 How it works
@@ -27,15 +28,14 @@ inspector itself.
 
 Steps:
 
- 1. import the inspector from your program (add `import inspector` at the top)
+ 1. add `import inspector` to your program
  2. run your program
- 3. run the inspector (`python inspector.py`), an interactive shell will appear
- 4. type code into the shell to change, read or add variables of your program
-    while your program is running
- 5. to exit the shell (not your program) press Ctrl-D or Ctrl-C, or type `exit`
+ 3. run the inspector with `python inspector.py`
+ 4. type code into the shell
 
-You could, for example, add whole class from the shell and rewrite some
-function so that it starts using your newly-created class.
+After you're done, exit the shell by pressing Ctrl-D or Ctrl-C, or typing
+`exit`. You program will continue to run with all the changes made. You can run
+the inspector again anytime you want.
 
 
 Example
