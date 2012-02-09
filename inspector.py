@@ -289,7 +289,7 @@ def inspector_shell(host, port, timeout, passphrase):
     try:
         sock.connect((host, port))
         # get the file name that runs the server
-        sock.send("__file__")
+        sock.send('__importer_file__')
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
@@ -361,6 +361,9 @@ def importer_server():
     if not importer_globals:
         print('From where are you importing?')
         return
+    # save file variable for inspector's shell to display
+    importer_file = importer_globals.get('__file__', 'Python shell')
+    importer_globals['__importer_file__'] = importer_file
     # server variables
     host = importer_globals.get('INSPECTOR_HOST', HOST)
     port = importer_globals.get('INSPECTOR_PORT', PORT)
