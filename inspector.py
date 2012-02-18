@@ -66,7 +66,7 @@ except ImportError:
 import argparse
 
 
-__version__ = '0.2.2'
+__version__ = '0.4.1'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -262,14 +262,14 @@ class ImporterServer(object):
         return output.getvalue()
     
     @contextlib.contextmanager
-    def output(self, output=None):
+    def output(self):
         """
-        Context manager that puts the given output into the standard output,
-        yields the output, then puts the previous output back.
+        Context manager that saves the current standard output, creates a
+        dummy output for catching any standard output, yields that output,
+        then puts the previous output back.
         """
         clipboard = sys.stdout
-        if output is None:
-            output = io.StringIO()
+        output = io.StringIO()
         sys.stdout = output
         yield output
         sys.stdout = clipboard
@@ -294,7 +294,7 @@ def inspector_shell(host, port, timeout, passphrase):
     try:
         sock.connect((host, port))
         # get the file name that runs the server
-        sock.send("__file__")
+        sock.send('__importer_file__')
         importer_file = sock.receive().strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
@@ -360,12 +360,15 @@ def importer_server():
     # this behaves strangely for me, so I'm checking the whole stack to make it work for everybody
     importer_globals = None
     for frame in inspect.stack():
-        if frame[0].f_globals['__name__'] == '__main__':
+        if frame[0].f_globals['__name__'] != __name__:
             importer_globals = frame[0].f_globals
             break
     if not importer_globals:
         print('From where are you importing?')
         return
+    # save file variable for inspector's shell to display
+    importer_file = importer_globals.get('__file__', 'Python shell')
+    importer_globals['__importer_file__'] = importer_file
     # server variables
     host = importer_globals.get('INSPECTOR_HOST', HOST)
     port = importer_globals.get('INSPECTOR_PORT', PORT)
