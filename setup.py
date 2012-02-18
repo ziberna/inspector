@@ -50,7 +50,7 @@ setup(
     author='Jure Ziberna and Andrew Moffat (Inspect-Shell)',
     author_email='j.ziberna@gmail.com',
     url='https://github.com/jzib/inspector',
-    version='0.5.0',
+    version='0.5.1',
     license='GNU GPL 3',
     py_modules=['inspector']
 )
