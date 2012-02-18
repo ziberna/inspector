@@ -1,11 +1,7 @@
 _Inspector_ is a re-implementation of Andrew Moffat's
-[Inspect-Shell](https://github.com/amoffat/Inspect-Shell). It doesn't support
-autocompletion yet.
+[Inspect-Shell](https://github.com/amoffat/Inspect-Shell).
 
-It runs with both Python 2 and 3. Since the server (inspector importer) and the
-client (inspector shell) are separate processes, you can even run one side
-in Python 3 and the other in Python 2. Everything you type into the shell will
-be evaluated from both sides though.
+It works with Python 2 and 3.
 
 
 What it does
@@ -32,6 +28,8 @@ Steps:
  2. run your program
  3. run the inspector with `python inspector.py`
  4. type code into the shell
+
+Inspector also supports tab completion for your program's variables.
 
 After you're done, exit the shell by pressing Ctrl-D or Ctrl-C, or typing
 `exit`. You program will continue to run with all the changes made. You can run
