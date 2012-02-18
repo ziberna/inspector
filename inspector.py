@@ -49,6 +49,7 @@ import atexit
 # server and sockets
 import socket
 import threading
+import json
 # compiler
 import codeop
 # output
@@ -62,11 +63,13 @@ try:
     import readline
 except ImportError:
     readline = None
+else:
+    import rlcompleter
 # command-line arguments
 import argparse
 
 
-__version__ = '0.4.1'
+__version__ = '0.5.0'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -137,10 +140,11 @@ class Socket(object):
         self.socket.settimeout(self.timeout)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
-    def send(self, message):
+    def send(self, type, data):
         """
         Combines a header with a message. The header contains message length.
         """
+        message = json.dumps({'type': type, 'data': data})
         header = self.header_format % len(message)
         message = header + message
         self.socket.sendall(message.encode())
@@ -149,15 +153,11 @@ class Socket(object):
         """
         Receives a message. Parses the first chunk to get the message length.
         """
-        message = self.socket.recv(self.chunk_size)
-        length, message_chunk = self.parse_header(message)
-        if not message_chunk:
-            return None
-        length = int(length)
-        message = message_chunk
+        header = self.socket.recv(self.chunk_size)
+        length, message = self.parse_header(header)
         while len(message) < length:
             message += self.socket.recv(self.chunk_size)
-        return message.decode()
+        return json.loads(message.decode())
     
     def parse_header(self, header):
         """
@@ -166,7 +166,7 @@ class Socket(object):
         """
         header_separator = self.header_separator.encode()
         length, separator, message_chunk = header.partition(header_separator)
-        return length, message_chunk
+        return int(length), message_chunk
 
 
 class ImporterServer(object):
@@ -177,6 +177,10 @@ class ImporterServer(object):
     def __init__(self, address, namespace):
         self.address = address
         self.namespace = namespace
+        if readline:
+            self.completer = rlcompleter.Completer(namespace=namespace)
+        else:
+            self.completer = None
         self.running = False
     
     def start(self, *args, **kwargs):
@@ -217,8 +221,11 @@ class ImporterServer(object):
                     continue
                 status(STATUS_RECEIVED, 2)
                 # sending part
-                output = self.code_output(code)
-                client_socket.send(output)
+                if code['type'] == 'completion':
+                    output = self.completion(code['data'])
+                else:
+                    output = self.code_output(code['data'])
+                client_socket.send('output', output)
             except socket.error as socket_error:
                 print(socket_error)
                 break
@@ -269,6 +276,15 @@ class ImporterServer(object):
         yield output
         sys.stdout = clipboard
     
+    def completion(self, data):
+        """
+        Completes a given string using importer's namespace.
+        """
+        if self.completer:
+            return self.completer.complete(data['text'], data['state'])
+        else:
+            return ''
+    
     def shutdown(self):
         """
         Shuts down the server (closes the server socket) and deletes namespace.
@@ -289,22 +305,25 @@ def inspector_shell(host, port, timeout, passphrase):
     try:
         sock.connect((host, port))
         # get the file name that runs the server
-        sock.send('__importer_file__')
-        importer_file = sock.receive().strip().strip("'")
+        sock.send('code', '__importer_file__')
+        importer_file = sock.receive()['data'].strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
-        shell_history()
+        # enable shell history and tab completion if readline is available
+        if readline:
+            shell_history()
+            tab_completion(sock)
         while True:
             # get input from the user
             code = code_input()
             if code.strip() == 'exit':
                 break
             # send the input and receive the output
-            sock.send(code)
+            sock.send('code', code)
             output = sock.receive()
             # print if the input has executed
-            if output:
-                sys.stdout.write(output)
+            if output['data']:
+                sys.stdout.write(str(output['data']))
     except (EOFError, KeyboardInterrupt):
         print('')
     except (socket.error, socket.timeout) as error:
@@ -338,14 +357,26 @@ def shell_history():
     """
     Reads shell history from a file, registers writing at exit
     """
-    if not readline:
-        return
     history_file = os.path.expanduser(SHELL_HISTORY_FILE)
     try:
         readline.read_history_file(history_file)
     except IOError:
         pass
     atexit.register(readline.write_history_file, history_file)
+
+
+def tab_completion(sock):
+    """
+    Initializes tab completion with the help of rlcompleter module.
+    """
+    def completer(text, state):
+        try:
+            sock.send('completion', {'text':text, 'state':state})
+            return sock.receive()['data']
+        except (socket.error, socket.timeout):
+            return ''
+    readline.set_completer(completer)
+    readline.parse_and_bind('tab: complete')
 
 
 def importer_server():
