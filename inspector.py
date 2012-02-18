@@ -66,7 +66,7 @@ except ImportError:
 import argparse
 
 
-__version__ = '0.4.0'
+__version__ = '0.4.1'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -355,7 +355,7 @@ def importer_server():
     # this behaves strangely for me, so I'm checking the whole stack to make it work for everybody
     importer_globals = None
     for frame in inspect.stack():
-        if frame[0].f_globals['__name__'] == '__main__':
+        if frame[0].f_globals['__name__'] != __name__:
             importer_globals = frame[0].f_globals
             break
     if not importer_globals:
