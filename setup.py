@@ -1,8 +1,10 @@
 from distutils.core import setup
 
 long_description = """
-Inspector is a re-implementation of Andrew Moffat's Inspect-Shell.
- 
+Inspector is a re-implementation of Andrew Moffat's Inspect-Shell
+(https://github.com/amoffat/Inspect-Shell).
+
+
 What it does
 ------------
 
@@ -28,6 +30,8 @@ Steps:
 3. run the inspector with `python inspector.py`
 4. type code into the shell
 
+Inspector also supports tab completion for your program's variables.
+
 After you're done, exit the shell by pressing Ctrl-D or Ctrl-C, or typing
 `exit`. You program will continue to run with all the changes made. You can run
 the inspector again anytime you want.
@@ -35,7 +39,8 @@ the inspector again anytime you want.
 You can also import the inspector from a Python shell if you just want to see
 how it works.
 
-See https://github.com/jzib/inspector for more information.
+Inspector works with Python 2 and 3. See https://github.com/jzib/inspector for
+more information.
 """
 
 setup(
@@ -45,7 +50,7 @@ setup(
     author='Jure Ziberna and Andrew Moffat (Inspect-Shell)',
     author_email='j.ziberna@gmail.com',
     url='https://github.com/jzib/inspector',
-    version='0.5.0',
+    version='0.5.1',
     license='GNU GPL 3',
     py_modules=['inspector']
 )

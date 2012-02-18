@@ -69,7 +69,7 @@ else:
 import argparse
 
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -160,6 +160,8 @@ class Socket(object):
         """
         header = self.socket.recv(self.chunk_size)
         length, message = self.parse_header(header)
+        if not length:
+            return None
         while len(message) < length:
             message += self.socket.recv(self.chunk_size)
         return json.loads(message.decode())
@@ -171,7 +173,10 @@ class Socket(object):
         """
         header_separator = self.header_separator.encode()
         length, separator, message_chunk = header.partition(header_separator)
-        return int(length), message_chunk
+        try:
+            return int(length), message_chunk
+        except ValueError:
+            return None, None
 
 
 class ImporterServer(object):
