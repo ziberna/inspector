@@ -66,7 +66,7 @@ except ImportError:
 import argparse
 
 
-__version__ = '0.2.2'
+__version__ = '0.4.0'
 __copyright__ = """Copyright (C) 2011 by Andrew Moffat
 Copyright (C) 2012  Jure Ziberna"""
 __license__ = 'GNU GPL 3'
@@ -257,14 +257,14 @@ class ImporterServer(object):
         return output.getvalue()
     
     @contextlib.contextmanager
-    def output(self, output=None):
+    def output(self):
         """
-        Context manager that puts the given output into the standard output,
-        yields the output, then puts the previous output back.
+        Context manager that saves the current standard output, creates a
+        dummy output for catching any standard output, yields that output,
+        then puts the previous output back.
         """
         clipboard = sys.stdout
-        if output is None:
-            output = io.StringIO()
+        output = io.StringIO()
         sys.stdout = output
         yield output
         sys.stdout = clipboard
