@@ -161,6 +161,13 @@ class Socket(object):
             message += self.socket.recv(self.chunk_size)
         return json.loads(message.decode())
     
+    def message(self, type, data):
+        """
+        Socket.send + Socket.receive shortcut
+        """
+        self.send(type, data)
+        return self.receive()
+    
     def parse_header(self, header):
         """
         Parses the header (the first message chunk) for message length. Returns
@@ -310,8 +317,8 @@ def inspector_shell(host, port, timeout, passphrase):
     try:
         sock.connect((host, port))
         # get the file name that runs the server
-        sock.send('code', '__importer_file__')
-        importer_file = sock.receive()['data'].strip().strip("'")
+        importer_file = sock.message('code', '__importer_file__')['data']
+        importer_file = importer_file.strip().strip("'")
         # display some information about the connection
         print("<Inspector @ %s:%d (%s)>" % (host, port, importer_file))
         # enable shell history and tab completion if readline is available
@@ -324,8 +331,7 @@ def inspector_shell(host, port, timeout, passphrase):
             if code.strip() == 'exit':
                 break
             # send the input and receive the output
-            sock.send('code', code)
-            output = sock.receive()
+            output = sock.message('code', code)
             # print if the input has executed
             if output['data']:
                 sys.stdout.write(str(output['data']))
@@ -376,8 +382,8 @@ def tab_completion(sock):
     """
     def completer(text, state):
         try:
-            sock.send('completion', {'text':text, 'state':state})
-            return sock.receive()['data']
+            msg = sock.message('completion', {'text':text, 'state':state})
+            return msg['data']
         except (socket.error, socket.timeout):
             return ''
     readline.set_completer(completer)
